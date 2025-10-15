@@ -352,41 +352,64 @@ class AntiEchoCore:
         }
     
     def query_similar_articles(self, query_text: str, n_results: int = 10) -> List[Dict[str, Any]]:
-        """Query for similar articles based on topic similarity."""
-        # Generate topic vectors for query
+        """Query for similar articles based on topic overlap count."""
+        # Generate topic matches for query
         query_topic_vecs = self.topic_vecs(query_text)
         if len(query_topic_vecs) == 0:
             return []
         
-        # Query topic collection
-        results = self.topic_coll.query(
-            query_embeddings=[query_topic_vecs[0].tolist()],
-            n_results=n_results,
-            include=["metadatas", "distances"]
-        )
+        query_topics = set()
+        for vec in query_topic_vecs:
+            matches = self.match_topics(vec)
+            query_topics.update(matches)
         
-        return results["metadatas"][0] if results["metadatas"] else []
+        if not query_topics:
+            return []
+        
+        # Get all articles from topic collection
+        all_articles = self.topic_coll.get(include=["metadatas"])
+        
+        # Calculate topic overlap for each article
+        article_scores = []
+        for i, metadata in enumerate(all_articles["metadatas"]):
+            article_topics = set(metadata.get("topics", []))
+            overlap_count = len(query_topics.intersection(article_topics))
+            
+            if overlap_count > 0:  # Only include articles with topic overlap
+                article_scores.append((overlap_count, metadata))
+        
+        # Sort by topic overlap count (descending - most similar first)
+        article_scores.sort(key=lambda x: x[0], reverse=True)
+        
+        # Return top n_results
+        return [metadata for _, metadata in article_scores[:n_results]]
     
     def query_opposing_stance(self, query_text: str, n_results: int = 10) -> List[Dict[str, Any]]:
-        """Query for articles with opposing political stance."""
+        """Query for articles with opposing political stance using cosine similarity (ascending order)."""
         # Generate stance embedding for query
         query_stance_embedding = self.encode_text(query_text, self.stance_embedder)
         
-        # Query stance collection
-        results = self.stance_coll.query(
-            query_embeddings=[query_stance_embedding.tolist()],
-            n_results=n_results * 2,  # Get more results to filter
-            include=["metadatas", "distances"]
-        )
+        # Get all articles from stance collection
+        all_articles = self.stance_coll.get(include=["metadatas", "embeddings"])
         
-        # Filter for different political leanings
-        opposing_articles = []
-        if results["metadatas"]:
-            for metadata in results["metadatas"][0]:
-                # Simple heuristic: different political leaning = opposing
-                if metadata.get("political_leaning") != "apolitical_or_unknown":
-                    opposing_articles.append(metadata)
-                if len(opposing_articles) >= n_results:
-                    break
+        if not all_articles["metadatas"]:
+            return []
         
-        return opposing_articles
+        # Calculate cosine similarities
+        article_similarities = []
+        for i, (metadata, embedding) in enumerate(zip(all_articles["metadatas"], all_articles["embeddings"])):
+            # Calculate cosine similarity
+            similarity = cosine_similarity(
+                [query_stance_embedding], 
+                [embedding]
+            )[0][0]
+            
+            # Only include articles with different political leanings
+            if metadata.get("political_leaning") not in ["apolitical_or_unknown", "unknown"]:
+                article_similarities.append((similarity, metadata))
+        
+        # Sort by similarity in ASCENDING order (most dissimilar first)
+        article_similarities.sort(key=lambda x: x[0])
+        
+        # Return top n_results (most dissimilar)
+        return [metadata for _, metadata in article_similarities[:n_results]]
