@@ -273,34 +273,52 @@ class AntiEchoCore:
         """Process a single article through the full pipeline."""
         text = article.get("text", "")
         if not text:
+            print("    ❌ No text content found")
             return None
         
+        print(f"    📄 Text length: {len(text)} characters")
+        
         # Topic analysis
+        print(f"    🔍 Step 1: Topic analysis...")
         topic_vecs = self.topic_vecs(text)
+        print(f"      Generated {len(topic_vecs)} topic vectors")
+        
         topic_matches = []
         if len(topic_vecs) > 0:
-            for vec in topic_vecs:
+            for i, vec in enumerate(topic_vecs):
                 matches = self.match_topics(vec)
                 topic_matches.extend(matches)
+                print(f"      Vector {i+1}: {len(matches)} topic matches: {matches}")
+        
+        unique_topics = list(set(topic_matches))
+        print(f"      Final topics: {unique_topics}")
         
         # Stance classification
+        print(f"    🤖 Step 2: Political classification...")
         political_leaning, implied_stance = self.flan_classify(text)
+        print(f"      Political leaning: {political_leaning}")
+        print(f"      Implied stance: {implied_stance}")
+        
+        print(f"    📝 Step 3: Summarization...")
         summary = self.bart_one_sentence(text)
+        print(f"      Summary: {summary[:100]}...")
         
         # Create stance embedding
+        print(f"    🧮 Step 4: Creating stance embedding...")
         stance_text = f"Political: {political_leaning}. Stance: {implied_stance}. Summary: {summary}"
         stance_embedding = self.encode_text(stance_text, self.stance_embedder)
+        print(f"      Stance embedding dimension: {len(stance_embedding)}")
         
         # Create article ID
         article_id = hashlib.md5(text.encode()).hexdigest()
         
-        return {
+        result = {
             "id": article_id,
             "title": article.get("title", ""),
             "url": article.get("url", ""),
             "source": article.get("source", ""),
             "published": article.get("published", ""),
-            "topics": list(set(topic_matches)),
+            "topics": unique_topics,
             "political_leaning": political_leaning,
             "implied_stance": implied_stance,
             "summary": summary,
@@ -308,6 +326,9 @@ class AntiEchoCore:
             "stance_embedding": stance_embedding.tolist(),
             "text_length": len(text)
         }
+        
+        print(f"    ✅ Processing complete!")
+        return result
     
     def upsert_to_chroma(self, processed_article: Dict[str, Any]):
         """Upsert processed article to ChromaDB collections."""
