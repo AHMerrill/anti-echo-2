@@ -41,10 +41,19 @@ except:
 class AntiEchoCore:
     """Core functionality for the Anti-Echo Chamber system."""
     
-    def __init__(self, config_path: str = "config/config.yaml"):
+    def __init__(self, config_path: str = "config/config.yaml", device: str = None):
         """Initialize the core system with configuration."""
         self.config = self.load_config(config_path)
-        self.device = "cuda" if os.environ.get("CUDA_VISIBLE_DEVICES") else "cpu"
+        
+        # Device detection with fallback
+        if device is None:
+            try:
+                import torch
+                self.device = "cuda" if torch.cuda.is_available() else "cpu"
+            except ImportError:
+                self.device = "cuda" if os.environ.get("CUDA_VISIBLE_DEVICES") else "cpu"
+        else:
+            self.device = device
         
         # Initialize models lazily
         self._topic_embedder = None
