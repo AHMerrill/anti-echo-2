@@ -8,8 +8,8 @@ A system for analyzing news articles across political spectrums to identify oppo
 
 | Notebook | Description | Colab Link |
 |----------|-------------|------------|
-| **Scraper & Processor** | Scrape news articles and process through the pipeline | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/AHMerrill/anti-echo-2/blob/master/notebooks/scraper_artifacts.ipynb) |
-| **Article Comparison** | Compare articles and find opposing viewpoints | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/AHMerrill/anti-echo-2/blob/master/notebooks/anti_echo_chamber.ipynb) |
+| **Scraper & Processor** | Scrape news articles and process through the pipeline | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/AHMerrill/anti-echo-2/blob/main/notebooks/scraper_artifacts.ipynb) |
+| **Article Comparison** | Compare articles and find opposing viewpoints | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/AHMerrill/anti-echo-2/blob/main/notebooks/anti_echo_chamber.ipynb) |
 
 ## 📁 Repository Structure
 
